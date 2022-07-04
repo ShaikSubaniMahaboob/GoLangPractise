@@ -27,3 +27,7 @@ func Message(message string) func(http.ResponseWriter, *http.Request) {
 func Greet(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Hello World")
 }
+
+//localhost:50080/greet
+//localhost:50080/health
+//localhost:50080/ping
