@@ -25,6 +25,14 @@ func (p *ProductDB) Create(c *models.Products) (*[]models.Products, error) {
 	return &Products, nil
 }
 
+//create method     without using slice
+/*func (p *ProductDB) Create(c *models.Products) (*[]models.Products, error) {
+	users := []models.Products{}
+	config.DB.Find(users)
+	Products = append(Products, *c)
+	return &Products, nil
+}*/
+
 //GetByName
 func (p *ProductDB) GetByName(s string) (*[]models.Products, error) {
 	var Products1 []models.Products

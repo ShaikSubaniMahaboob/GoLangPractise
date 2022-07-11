@@ -1,0 +1,13 @@
+version: '3.8'
+services:
+db:
+image: postgress
+volumes:
+- ./data/db:/var/lib/postgress/data
+ports:
+- "5432:5432"
+environment:
+- POSTGRESS-USER=postgress
+- POSTGRESS_PASSWORD=postgress
+- POSTGRESS_DB=postgress
+                  // sudo docker-compose up--build      * its gives connection to database 
