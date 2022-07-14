@@ -3,92 +3,136 @@ package handler
 import (
 	"Product/Interfaces"
 	"Product/models"
-	"Product/productDB"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang/glog"
 )
 
 type OrdersHandler struct {
 	IOrders Interfaces.IOrders
 }
 
-func (p *OrdersHandler) GetOrderHand() func(*gin.Context) {
+func (ch *OrdersHandler) OrderGetHand() func(*gin.Context) {
 	return func(c *gin.Context) {
-		order, _ := p.IOrders.Get()
-		c.JSON(http.StatusOK, order)
-	}
-}
+		if ch == nil || ch.IOrders == nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"status":  "fail",
+				"message": "Error in the handler",
+			})
+			glog.Errorln("OrdersHandler or IOrders is nil")
+			c.Abort()
+			return
+		}
 
-func (p *OrdersHandler) CreateOrderHand() func(*gin.Context) {
-	return func(c *gin.Context) {
-		//_, err := ioutil.ReadAll(c.Request.Body)
+		id, ok := c.Params.Get("id")
 
-		order := &models.Orders{}
-		err := json.NewDecoder(c.Request.Body).Decode(order)
-		//err = json.Unmarshal(buf, err)
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"status":  "fail",
+				"message": "id parameter not found",
+			})
+			glog.Errorln("id parameter not found")
+			c.Abort()
+			return
+		}
+
+		if id == "" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"status":  "fail",
+				"message": "error in id param",
+			})
+			glog.Errorln("id cannot be empty")
+			c.Abort()
+			return
+		}
+		contact, err := ch.IOrders.Get(id)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"status":  "fail",
-				"message": err,
+				"message": "error in fetching contact",
 			})
+			glog.Errorln(err)
+			c.Abort()
+			return
+		}
+		if contact == nil {
+			c.JSON(http.StatusNoContent, nil)
+			glog.Info("No content")
 			c.Abort()
 			return
 		}
 
-		id, _ := p.IOrders.Create(order)
-
-		c.JSON(http.StatusCreated, gin.H{
-			"status":  "success",
-			"message": id,
-		})
+		c.JSON(http.StatusOK, *contact)
+		glog.Info("Customers successfully fetched:", *contact)
 		c.Abort()
-
 	}
 }
 
-func (p *OrdersHandler) DeleteOrderHand() func(*gin.Context) {
+func (ch *OrdersHandler) OrderCreateHand() func(*gin.Context) {
 	return func(c *gin.Context) {
-		orderid := c.Params.ByName("orderid")
-
-		if orderid == "" {
+		if ch == nil || ch.IOrders == nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"status":  "fail",
-				"message": "id cannot be empty",
+				"message": "Error in the handler",
 			})
+			glog.Errorln("OrdersHandler or IOrder is nil")
 			c.Abort()
 			return
 		}
-		result, _ := p.IOrders.Delete(orderid)
-		abc := productDB.Orders
 
-		c.JSON(http.StatusOK, gin.H{
+		buf, err := ioutil.ReadAll(c.Request.Body)
+
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"status":  "fail",
+				"message": "Error in the body",
+			})
+			glog.Errorln(err)
+			c.Abort()
+			return
+		}
+
+		contact := &models.Orders{}
+		err = json.Unmarshal(buf, contact)
+
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"status":  "fail",
+				"message": "Error in body json format",
+			})
+			glog.Errorln(err)
+			c.Abort()
+			return
+		}
+		name, err := ch.IOrders.Create(contact)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"status":  "fail",
+				"message": "Error to store in database",
+			})
+			glog.Errorln(err)
+			c.Abort()
+			return
+		}
+
+		glog.Errorln(err)
+		c.JSON(http.StatusCreated, gin.H{
 			"status":  "success",
-			"message": fmt.Sprint(result, " record deleted"),
-			"Rem":     abc,
+			"message": name,
 		})
+		glog.Info("orders successfully created:", name)
 		c.Abort()
-	}
-}
-
-func (p *OrdersHandler) GetByIdHand() func(*gin.Context) {
-	return func(c *gin.Context) {
-
-		orderid := c.Params.ByName("orderid")
-
-		result, _ := p.IOrders.GetById(orderid)
-
-		c.JSON(http.StatusOK, result)
-
 	}
 }
 
 func (p *OrdersHandler) UpdateOrderHand() func(*gin.Context) {
 	return func(c *gin.Context) {
-		order := &models.Orders{}
-		err := json.NewDecoder(c.Request.Body).Decode(order)
+		product := &models.Orders{}
+		err := json.NewDecoder(c.Request.Body).Decode(product)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"status":  "fail",
@@ -97,9 +141,51 @@ func (p *OrdersHandler) UpdateOrderHand() func(*gin.Context) {
 			c.Abort()
 			return
 		}
-		orderid := c.Params.ByName("orderid")
-		result, _ := p.IOrders.Update(orderid, order)
+		name := c.Params.ByName("orderid")
+		result, _ := p.IOrders.Update(name, product)
 		c.JSON(http.StatusOK, result)
 
+	}
+}
+
+func (ch *OrdersHandler) OrderDeleteHand() func(*gin.Context) {
+	return func(c *gin.Context) {
+		if ch == nil || ch.IOrders == nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"status":  "fail",
+				"message": "Error in the handler",
+			})
+			glog.Errorln("OrdersHandler or IOrders is nil")
+			c.Abort()
+			return
+		}
+
+		id, ok := c.Params.Get("id")
+
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"status":  "fail",
+				"message": "id parameter not found",
+			})
+			glog.Errorln("id parameter not found")
+			c.Abort()
+			return
+		}
+		result, err := ch.IOrders.Delete(id)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"status":  "fail",
+				"message": "error deleting contact",
+			})
+			glog.Errorln(err)
+			c.Abort()
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"status":  "success",
+			"message": fmt.Sprint(result, " record deleted"),
+		})
+		glog.Info("Order successfully deleted:", result)
+		c.Abort()
 	}
 }

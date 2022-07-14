@@ -3,38 +3,41 @@ package productDB
 import (
 	"Product/models"
 	"fmt"
+
+	"gorm.io/gorm"
 )
 
 type ProductDB struct {
+	Client interface{}
 }
 
-var Products []models.Products
+func (c *ProductDB) Get(id string) (*models.Products, error) {
+	contact := &models.Products{}
+	result := c.Client.(*gorm.DB).First(contact, id)
 
-//get method
-func (p *ProductDB) Get() (*[]models.Products, error) {
-
-	//m := &models.Products{Name: "Apple", Number: "1890", Category: "MobilePhone", Description: "Apple2.0"}
-
-	ErrorType := fmt.Errorf("there is Error in Products Database")
-	return &Products, ErrorType
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return contact, nil
 }
 
 //create method
-func (p *ProductDB) Create(c *models.Products) (*[]models.Products, error) {
-	Products = append(Products, *c)
-	return &Products, nil
+//func (p *ProductDB) Create(c *models.Products) (*[]models.Products, error) {
+//	Products = append(Products, *c)
+//	return &Products, nil
+//}
+func (c *ProductDB) Create(contact *models.Products) (interface{}, error) {
+	c.Client.(*gorm.DB).AutoMigrate(&models.Products{})
+	result := c.Client.(*gorm.DB).Create(contact)
+	if result.Error != nil {
+		fmt.Println("------------->", result.Error)
+		return nil, result.Error
+	}
+	return contact.ID, nil
 }
 
-//create method     without using slice
-/*func (p *ProductDB) Create(c *models.Products) (*[]models.Products, error) {
-	users := []models.Products{}
-	config.DB.Find(users)
-	Products = append(Products, *c)
-	return &Products, nil
-}*/
-
-//GetByName
-func (p *ProductDB) GetByName(s string) (*[]models.Products, error) {
+//....
+/*func (p *ProductDB) GetByName(s string) (*[]models.Products, error) {
 	var Products1 []models.Products
 	for index, item := range Products {
 		if item.Name == s {
@@ -42,10 +45,10 @@ func (p *ProductDB) GetByName(s string) (*[]models.Products, error) {
 		}
 	}
 	return &Products1, nil
-}
+}*/
 
 //Update Method
-func (p *ProductDB) Update(s string, t *models.Products) (*[]models.Products, error) {
+/*func (p *ProductDB) Update(s string, t *models.Products) (*[]models.Products, error) {
 	for index, item := range Products {
 		if item.Name == s {
 			Products[index].Number = t.Number
@@ -54,13 +57,29 @@ func (p *ProductDB) Update(s string, t *models.Products) (*[]models.Products, er
 		}
 	}
 	return &Products, nil
-}
-func (p *ProductDB) Delete(s string) (string, error) {
+}*/
 
-	for index, item := range Products {
+func (p *ProductDB) Update(s string, t *models.Products) (interface{}, error) {
+	product := &models.Products{}
+	p.Client.(*gorm.DB).Model(&product).Where("id=?", s).Updates(&models.Products{Name: t.Name, Number: t.Number, Category: t.Category, Description: t.Description})
+
+	return product.Name, nil
+}
+
+func (c *ProductDB) Delete(id string) (interface{}, error) {
+	result := c.Client.(*gorm.DB).Delete(&models.Products{}, id)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return result.RowsAffected, nil
+}
+
+/*func (p *ProductDB) Delete(s string) (string, error) {
+for index, item := range Products {
 		if item.Name == s {
 			Products = append(Products[:index], Products[index+1:]...)
 		}
 	}
 	return s, nil
 }
+*/

@@ -2,53 +2,62 @@ package productDB
 
 import (
 	"Product/models"
+	"errors"
 	"fmt"
+
+	"gorm.io/gorm"
+)
+
+var (
+	ERROR_CONTACT_EXISTS = errors.New("order already exists with the given email address")
 )
 
 type OrdersDB struct {
+	Client interface{}
 }
 
-var Orders []models.Orders
+func (c *OrdersDB) Get(id string) (*models.Orders, error) {
+	contact := &models.Orders{}
+	result := c.Client.(*gorm.DB).First(contact, id)
 
-func (p *OrdersDB) Get() (*[]models.Orders, error) {
-
-	ErrorType := fmt.Errorf("there is Error in Products Database")
-	return &Orders, ErrorType
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return contact, nil
 }
 
-func (p *OrdersDB) Create(c *models.Orders) (*[]models.Orders, error) {
-	//pd := &models.Products{}
-
-	Orders = append(Orders, *c)
-	return &Orders, nil
+func (c *OrdersDB) Create(contact *models.Orders) (interface{}, error) {
+	c.Client.(*gorm.DB).AutoMigrate(&models.Orders{})
+	result := c.Client.(*gorm.DB).Create(contact)
+	if result.Error != nil {
+		fmt.Println("------------->", result.Error)
+		return nil, result.Error
+	}
+	return contact.ID, nil
 }
 
-func (p *OrdersDB) Delete(s string) (string, error) {
+//var Products []models.Products
 
-	for index, item := range Orders {
-		if item.OrderID == s {
-			Orders = append(Orders[:index], Orders[index+1:]...)
+/*func (p *CustomersDB) Update(s string, t *models.Customers) (interface{}, error) {
+	for index, item := range Products {
+		if item.Name == s {
+			Products[index].Number = t.Number
+			Products[index].Email = t.Email
+			Products[index].Address = t.Address
 		}
 	}
-	return s, nil
-}
+	return &Products, nil
+}*/
+func (p *OrdersDB) Update(s string, t *models.Orders) (interface{}, error) {
+	product := &models.Orders{}
+	p.Client.(*gorm.DB).Model(&product).Where("ID=?", s).Updates(&models.Orders{ProductID: t.ProductID, CustomerID: t.CustomerID, OrderID: t.OrderID})
 
-func (p *OrdersDB) GetById(s string) (*[]models.Orders, error) {
-	var Orders1 []models.Orders
-	for index, item := range Orders {
-		if item.OrderID == s {
-			Orders1 = append(Orders1, Orders[index])
-		}
-	}
-	return &Orders1, nil
+	return product.ID, nil
 }
-
-func (p *OrdersDB) Update(s string, t *models.Orders) (*[]models.Orders, error) {
-	for index, item := range Orders {
-		if item.OrderID == s {
-			Orders[index].ProductID = t.ProductID
-			Orders[index].CustomerID = t.CustomerID
-		}
+func (c *OrdersDB) Delete(orderid string) (interface{}, error) {
+	result := c.Client.(*gorm.DB).Delete(&models.Orders{}, orderid)
+	if result.Error != nil {
+		return nil, result.Error
 	}
-	return &Orders, nil
+	return result.RowsAffected, nil
 }
